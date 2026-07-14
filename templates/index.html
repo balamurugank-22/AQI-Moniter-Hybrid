@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AirPulse AI - Professional AQI Monitoring</title>
+    <link href="https://fonts.cdnfonts.com/css/google-sans" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #00f2fe;
+            --primary-hover: #4facfe;
+            --bg-color: #010a15;
+            --card-bg: rgba(6, 18, 38, 0.6);
+            --text-main: #f0fdfa;
+            --text-muted: #94a3b8;
+            --accent: #2dd4bf;
+            
+            /* Ambient Orb Base Colors */
+            --orb-1: rgba(45, 212, 191, 0.15);
+            --orb-2: rgba(0, 242, 254, 0.15);
+            --orb-3: rgba(79, 172, 254, 0.1);
+
+            /* AQI Colors */
+            --aqi-good: #10b981;
+            --aqi-satisfactory: #f59e0b;
+            --aqi-moderate: #f97316;
+            --aqi-poor: #ef4444;
+            --aqi-very-poor: #8b5cf6;
+            --aqi-severe: #9f1239;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Google Sans', sans-serif;
+            background: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+            transition: background-color 1.5s ease, color 1.5s ease;
+        }
+        
+        /* Dynamic AQI Themes */
+        body.theme-Good { --bg-color: #01150c; --card-bg: rgba(6, 38, 24, 0.6); --primary: #10b981; --primary-hover: #059669; --accent: #34d399; --orb-1: rgba(16, 185, 129, 0.15); --orb-2: rgba(5, 150, 105, 0.15); --orb-3: rgba(52, 211, 153, 0.1); }
+        body.theme-Satisfactory { --bg-color: #151001; --card-bg: rgba(38, 28, 6, 0.6); --primary: #f59e0b; --primary-hover: #d97706; --accent: #fbbf24; --orb-1: rgba(245, 158, 11, 0.15); --orb-2: rgba(217, 119, 6, 0.15); --orb-3: rgba(251, 191, 36, 0.1); }
+        body.theme-Moderate { --bg-color: #1a0a01; --card-bg: rgba(40, 15, 6, 0.6); --primary: #f97316; --primary-hover: #ea580c; --accent: #fb923c; --orb-1: rgba(249, 115, 22, 0.15); --orb-2: rgba(234, 88, 12, 0.15); --orb-3: rgba(251, 146, 60, 0.1); }
+        body.theme-Poor { --bg-color: #1a0505; --card-bg: rgba(45, 10, 10, 0.6); --primary: #ef4444; --primary-hover: #dc2626; --accent: #f87171; --orb-1: rgba(239, 68, 68, 0.15); --orb-2: rgba(220, 38, 38, 0.15); --orb-3: rgba(248, 113, 113, 0.1); }
+        body.theme-Very-Poor { --bg-color: #0d011a; --card-bg: rgba(22, 6, 45, 0.6); --primary: #8b5cf6; --primary-hover: #7c3aed; --accent: #a78bfa; --orb-1: rgba(139, 92, 246, 0.15); --orb-2: rgba(124, 58, 237, 0.15); --orb-3: rgba(167, 139, 250, 0.1); }
+        body.theme-Severe { --bg-color: #120105; --card-bg: rgba(35, 6, 12, 0.6); --primary: #9f1239; --primary-hover: #881337; --accent: #fb7185; --orb-1: rgba(159, 18, 57, 0.15); --orb-2: rgba(136, 19, 55, 0.15); --orb-3: rgba(251, 113, 133, 0.1); }
+
+        /* Ambient Background */
+        .ambient-orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            z-index: -1;
+            animation: floatOrb 20s infinite alternate ease-in-out;
+            opacity: 0.6;
+        }
+        .orb-1 { width: 50vw; height: 50vw; background: var(--orb-1); top: -15vw; left: -10vw; transition: background 1.5s ease; }
+        .orb-2 { width: 45vw; height: 45vw; background: var(--orb-2); bottom: -10vw; right: -5vw; animation-delay: -7s; transition: background 1.5s ease; }
+        .orb-3 { width: 60vw; height: 60vw; background: var(--orb-3); top: 20vh; left: 20vw; animation-delay: -14s; transition: background 1.5s ease; }
+
+        @keyframes floatOrb {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(5vw, 5vh) scale(1.1); }
+        }
+
+        /* Air Particles Animation */
+        .particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; overflow: hidden; }
+        .particle {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
+            filter: blur(1px);
+            animation: drift linear infinite;
+        }
+        .p1 { width: 4px; height: 4px; top: 20%; left: -10%; animation-duration: 25s; animation-delay: 0s; }
+        .p2 { width: 6px; height: 6px; top: 60%; left: -10%; animation-duration: 35s; animation-delay: -5s; opacity: 0.5; }
+        .p3 { width: 3px; height: 3px; top: 80%; left: -10%; animation-duration: 20s; animation-delay: -10s; }
+        .p4 { width: 5px; height: 5px; top: 40%; left: -10%; animation-duration: 30s; animation-delay: -15s; opacity: 0.8; }
+        .p5 { width: 8px; height: 8px; top: 10%; left: -10%; animation-duration: 40s; animation-delay: -2s; opacity: 0.3; }
+
+        @keyframes drift {
+            0% { transform: translateX(0) translateY(0) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateX(110vw) translateY(-20vh) rotate(360deg); opacity: 0; }
+        }
+
+        /* Layout Grid */
+        .aero-container {
+            width: 100%;
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 2rem 4rem;
+            display: grid;
+            grid-template-columns: 360px 1fr 360px;
+            grid-template-rows: auto 1fr;
+            gap: 2rem 3rem;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        @media (max-width: 1400px) {
+            .aero-container {
+                padding: 2rem;
+                grid-template-columns: 320px 1fr 320px;
+                gap: 2rem;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .aero-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto auto auto;
+                align-items: start;
+            }
+            .panel-center {
+                grid-row: 2;
+                padding: 2rem 0;
+            }
+            .panel-left {
+                grid-row: 3;
+            }
+            .panel-right {
+                grid-row: 4;
+            }
+        }
+
+        /* Header */
+        .aero-header {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            margin-bottom: 1rem;
+        }
+
+        .brand { display: flex; align-items: center; gap: 1.2rem; }
+        .logo-box {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0;
+            border-radius: 50%;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            display: flex; justify-content: center; align-items: center;
+            width: 85px;
+            height: 85px;
+            overflow: hidden;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+        .logo-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background: white; /* Matches the white background of the provided logo */
+        }
+        .brand h1 { margin: 0 0 0.2rem 0; font-size: 2.2rem; font-weight: 800; letter-spacing: -0.5px; }
+        .brand p { margin: 0; color: var(--text-muted); font-size: 1rem; }
+
+        .status-badge {
+            display: flex; align-items: center; gap: 0.75rem;
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--accent); padding: 0.75rem 1.25rem;
+            border-radius: 30px; font-weight: 600; font-size: 0.95rem;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.1);
+        }
+        .live-dot {
+            width: 10px; height: 10px; background: var(--accent); border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        /* Glass Panels */
+        .glass-panel {
+            background: var(--card-bg);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 32px;
+            padding: 2rem;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+            animation: fadeIn 0.8s ease-out;
+            width: 100%;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            transition: background 1.5s ease;
+        }
+        
+        /* Custom Scrollbar for Glass Panels */
+        .glass-panel::-webkit-scrollbar { width: 6px; }
+        .glass-panel::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); border-radius: 10px; }
+        .glass-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+        .glass-panel::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .glass-panel h3 {
+            margin-top: 0; color: white; font-size: 1.4rem; font-weight: 600; margin-bottom: 2rem;
+            display: flex; align-items: center; gap: 0.5rem;
+        }
+
+        /* Controls Panel (Left) */
+        .tabs { display: flex; gap: 0.5rem; margin-bottom: 2rem; background: rgba(0,0,0,0.3); padding: 0.5rem; border-radius: 16px; }
+        .tab { flex: 1; text-align: center; padding: 0.75rem; border-radius: 12px; cursor: pointer; transition: all 0.3s ease; font-weight: 600; font-size: 0.9rem; }
+        .tab.active { background: linear-gradient(135deg, var(--primary), var(--primary-hover)); color: white; box-shadow: 0 4px 15px rgba(14, 165, 233, 0.4); }
+        .tab:not(.active):hover { background: rgba(255,255,255,0.05); }
+
+        .input-group { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.5rem; }
+        .input-group label { font-size: 0.85rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+        .input-group input { 
+            background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); color: white; 
+            padding: 0.75rem 1rem; border-radius: 12px; font-family: inherit; font-size: 0.95rem; transition: all 0.3s ease; 
+        }
+        .input-group input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2); }
+
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem 0.8rem; }
+        .form-grid .input-group { margin-bottom: 0.5rem; }
+
+        .btn {
+            width: 100%; padding: 1rem; border: none; border-radius: 14px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+            color: white; font-family: inherit; font-weight: 600; font-size: 1.05rem;
+            cursor: pointer; transition: all 0.3s ease; display: flex; justify-content: center; align-items: center; gap: 0.75rem;
+            margin-top: 0.5rem;
+            box-shadow: 0 10px 25px rgba(14, 165, 233, 0.3);
+        }
+        .btn:hover { transform: translateY(-3px); box-shadow: 0 15px 30px rgba(14, 165, 233, 0.4); }
+        .btn:active { transform: translateY(0); }
+        .btn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+
+        .loader { display: none; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: white; animation: spin 1s ease-in-out infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .location-info { display: flex; align-items: center; gap: 0.5rem; margin-top: 1.5rem; color: var(--primary); font-size: 0.95rem; display: none; justify-content: center; background: rgba(14,165,233,0.1); padding: 0.75rem; border-radius: 12px; }
+
+        /* Center Panel: AQI Dial */
+        .panel-center {
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            position: relative; height: 100%; width: 100%;
+        }
+
+        .aqi-dial-wrapper {
+            position: relative;
+            display: flex; justify-content: center; align-items: center;
+            width: 100%;
+            max-width: 320px;
+            aspect-ratio: 1 / 1;
+            margin: 0 auto;
+        }
+
+        .aqi-circle {
+            width: 100%; height: 100%;
+            border-radius: 50%;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            background: rgba(13, 17, 33, 0.6);
+            backdrop-filter: blur(10px);
+            border: 4px solid rgba(255,255,255,0.05);
+            box-shadow: 0 0 50px rgba(0,0,0,0.5), inset 0 0 30px rgba(0,0,0,0.8);
+            position: relative;
+            z-index: 2;
+            transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* The animated dashed ring */
+        .aqi-circle::before {
+            content: ''; position: absolute; top: -15px; left: -15px; right: -15px; bottom: -15px;
+            border-radius: 50%; border: 2px dashed rgba(255,255,255,0.15);
+            animation: spin 40s linear infinite;
+        }
+        .aqi-circle::after {
+            content: ''; position: absolute; top: -25px; left: -25px; right: -25px; bottom: -25px;
+            border-radius: 50%; border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .aqi-value { font-size: clamp(3rem, 4.5vw, 5rem); font-weight: 800; line-height: 1; margin-bottom: 0.5rem; text-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+        .aqi-label { font-size: clamp(1rem, 1.2vw, 1.4rem); font-weight: 600; text-transform: uppercase; letter-spacing: 4px; opacity: 0.9; text-align: center; }
+
+        .glow {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 300px; height: 300px;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            z-index: 1; transition: all 0.8s ease; pointer-events: none; filter: blur(30px);
+        }
+
+        /* Dynamic Colors & Breathing Animation for Dial */
+        @keyframes breatheShadow {
+            0%, 100% { box-shadow: 0 0 30px var(--pulse-color), inset 0 0 20px var(--pulse-color); }
+            50% { box-shadow: 0 0 90px var(--pulse-color), inset 0 0 50px var(--pulse-color); }
+        }
+
+        .aqi-Good { border-color: var(--aqi-good); color: var(--aqi-good); --pulse-color: rgba(16, 185, 129, 0.5); animation: breatheShadow 4s ease-in-out infinite; }
+        .aqi-Good ~ .glow { background: radial-gradient(circle, var(--aqi-good) 0%, transparent 70%); opacity: 0.4; }
+        
+        .aqi-Satisfactory { border-color: var(--aqi-satisfactory); color: var(--aqi-satisfactory); --pulse-color: rgba(245, 158, 11, 0.5); animation: breatheShadow 4s ease-in-out infinite; }
+        .aqi-Satisfactory ~ .glow { background: radial-gradient(circle, var(--aqi-satisfactory) 0%, transparent 70%); opacity: 0.4; }
+        
+        .aqi-Moderate { border-color: var(--aqi-moderate); color: var(--aqi-moderate); --pulse-color: rgba(249, 115, 22, 0.5); animation: breatheShadow 4s ease-in-out infinite; }
+        .aqi-Moderate ~ .glow { background: radial-gradient(circle, var(--aqi-moderate) 0%, transparent 70%); opacity: 0.4; }
+        
+        .aqi-Poor { border-color: var(--aqi-poor); color: var(--aqi-poor); --pulse-color: rgba(239, 68, 68, 0.5); animation: breatheShadow 4s ease-in-out infinite; }
+        .aqi-Poor ~ .glow { background: radial-gradient(circle, var(--aqi-poor) 0%, transparent 70%); opacity: 0.4; }
+        
+        .aqi-Very-Poor { border-color: var(--aqi-very-poor); color: var(--aqi-very-poor); --pulse-color: rgba(139, 92, 246, 0.5); animation: breatheShadow 4s ease-in-out infinite; }
+        .aqi-Very-Poor ~ .glow { background: radial-gradient(circle, var(--aqi-very-poor) 0%, transparent 70%); opacity: 0.4; }
+        
+        .aqi-Severe { border-color: var(--aqi-severe); color: var(--aqi-severe); --pulse-color: rgba(159, 18, 57, 0.5); animation: breatheShadow 4s ease-in-out infinite; }
+        .aqi-Severe ~ .glow { background: radial-gradient(circle, var(--aqi-severe) 0%, transparent 70%); opacity: 0.4; }
+
+        /* Right Panel: Summary */
+        .panel-right {
+            opacity: 0.5;
+            transition: all 0.5s ease;
+        }
+        .panel-right.active {
+            opacity: 1;
+        }
+
+        .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .summary-item {
+            background: rgba(0,0,0,0.3); padding: 1.25rem; border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.05); text-align: left;
+            position: relative; overflow: hidden;
+            display: flex; flex-direction: column; justify-content: center;
+        }
+        .summary-item::after {
+            content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%;
+            background: var(--primary); opacity: 0.5;
+        }
+        .summary-label { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+        .summary-val { font-weight: 800; font-size: 1.5rem; color: var(--text-main); }
+    </style>
+</head>
+<body>
+
+<div class="ambient-orb orb-1"></div>
+<div class="ambient-orb orb-2"></div>
+<div class="ambient-orb orb-3"></div>
+
+<div class="particles">
+    <div class="particle p1"></div>
+    <div class="particle p2"></div>
+    <div class="particle p3"></div>
+    <div class="particle p4"></div>
+    <div class="particle p5"></div>
+</div>
+
+<div class="aero-container">
+    
+    <!-- Header -->
+    <div class="aero-header">
+        <div class="brand">
+            <div class="logo-box">
+                <img src="/static/logo.png" alt="AirPulse AI Logo">
+            </div>
+            <div>
+                <h1>AirPulse AI</h1>
+                <p>AQI Predictor</p>
+            </div>
+        </div>
+        <div class="status-badge">
+            <span class="live-dot"></span> Live Sync
+        </div>
+    </div>
+
+    <!-- Left Column: Controls -->
+    <div class="glass-panel panel-left">
+        <h3>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+            Data Acquisition
+        </h3>
+        
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('auto')" id="tab-auto">Auto</div>
+            <div class="tab" onclick="switchTab('search')" id="tab-search">Search</div>
+            <div class="tab" onclick="switchTab('manual')" id="tab-manual">Manual</div>
+        </div>
+
+        <div id="view-auto">
+            <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 2rem; line-height: 1.6;">Acquire high-precision atmospheric telemetry using your current geolocation.</p>
+            <button class="btn" id="btn-fetch" onclick="fetchLocationAndData()">
+                <div class="loader" id="loader-auto"></div>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg>
+                <span>Initiate Scan</span>
+            </button>
+            <div class="location-info" id="location-info">
+                <span id="location-text">Coordinates locked</span>
+            </div>
+        </div>
+
+        <div id="view-search" style="display: none;">
+            <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem; line-height: 1.6;">Target specific global coordinates for telemetry extraction.</p>
+            <div class="input-group">
+                <label>Target Location</label>
+                <input type="text" id="inp-location" placeholder="e.g. Chennai, Coimbatore, Salem, etc,.." onkeypress="if(event.key === 'Enter') searchLocationAndData()">
+            </div>
+            <button class="btn" id="btn-search" onclick="searchLocationAndData()">
+                <div class="loader" id="loader-search"></div>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <span>Search & Scan</span>
+            </button>
+            <div class="location-info" id="search-location-info">
+                <span id="search-location-text">Target acquired</span>
+            </div>
+        </div>
+
+        <div id="view-manual" style="display: none;">
+            <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem; line-height: 1.6;">Enter the telemetry parameters to manually synthesize an atmospheric profile.</p>
+            <div class="form-grid">
+                <div class="input-group"><label>PM2.5</label><input type="number" id="inp-PM2.5" min="0" max="500" step="0.1" value="45.0"></div>
+                <div class="input-group"><label>PM10</label><input type="number" id="inp-PM10" min="0" max="500" step="0.1" value="90.0"></div>
+                <div class="input-group"><label>NO2</label><input type="number" id="inp-NO2" min="0" max="300" step="0.1" value="25.0"></div>
+                <div class="input-group"><label>SO2</label><input type="number" id="inp-SO2" min="0" max="300" step="0.1" value="10.0"></div>
+                <div class="input-group"><label>CO</label><input type="number" id="inp-CO" min="0" max="50" step="0.1" value="0.8"></div>
+                <div class="input-group"><label>O3</label><input type="number" id="inp-O3" min="0" max="300" step="0.1" value="30.0"></div>
+                <div class="input-group"><label>Temp (°C)</label><input type="number" id="inp-temperature" min="-20" max="50" step="0.1" value="28.0"></div>
+                <div class="input-group"><label>Hum (%)</label><input type="number" id="inp-humidity" min="0" max="100" step="0.1" value="60.0"></div>
+                <div class="input-group" style="grid-column: 1/-1;"><label>Wind (km/h)</label><input type="number" id="inp-windspeed" min="0" max="100" step="0.1" value="12.0"></div>
+            </div>
+            <button class="btn" id="btn-manual" onclick="submitManual()">
+                <div class="loader" id="loader-manual"></div>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                <span>Process Telemetry</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Center Column: Main AQI Dial -->
+    <div class="panel-center">
+        <div class="aqi-dial-wrapper">
+            <div class="aqi-circle" id="aqi-circle">
+                <div class="aqi-value" id="aqi-val">--</div>
+                <div class="aqi-label" id="aqi-cat" style="color: var(--text-muted); opacity: 0.6;">Awaiting</div>
+            </div>
+            <div class="glow"></div>
+        </div>
+    </div>
+
+    <!-- Right Column: Summary Breakdown -->
+    <div class="glass-panel panel-right" id="inputs-summary">
+        <h3>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+            Telemetry Profile
+        </h3>
+        <div class="summary-grid" id="summary-grid">
+            <div style="text-align:center; color: var(--text-muted); grid-column: 1/-1; padding: 4rem 0; font-size: 0.9rem;">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.2; margin-bottom: 1rem;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                <br>Waiting for scan initialization...
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    function switchTab(tab) {
+        document.getElementById('view-auto').style.display = tab === 'auto' ? 'block' : 'none';
+        document.getElementById('view-search').style.display = tab === 'search' ? 'block' : 'none';
+        document.getElementById('view-manual').style.display = tab === 'manual' ? 'block' : 'none';
+        document.getElementById('tab-auto').className = tab === 'auto' ? 'tab active' : 'tab';
+        document.getElementById('tab-search').className = tab === 'search' ? 'tab active' : 'tab';
+        document.getElementById('tab-manual').className = tab === 'manual' ? 'tab active' : 'tab';
+    }
+
+    async function fetchDataForLatLon(lat, lon, btn, loader) {
+        try {
+            // Fetch AQI Data using Open-Meteo Air Quality API
+            const aqiRes = await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone`);
+            const aqiData = await aqiRes.json();
+            
+            // Fetch Weather Data
+            const wxRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m`);
+            const wxData = await wxRes.json();
+
+            const payload = {
+                "PM2.5": aqiData.current?.pm2_5 || 0,
+                "PM10": aqiData.current?.pm10 || 0,
+                "CO": (aqiData.current?.carbon_monoxide || 0) / 1000, // Open-Meteo CO is usually in µg/m³, model expects mg/m³
+                "NO2": aqiData.current?.nitrogen_dioxide || 0,
+                "SO2": aqiData.current?.sulphur_dioxide || 0,
+                "O3": aqiData.current?.ozone || 0,
+                "temperature": wxData.current?.temperature_2m || 0,
+                "humidity": wxData.current?.relative_humidity_2m || 0,
+                "windspeed": wxData.current?.wind_speed_10m || 0
+            };
+
+            // Populate manual inputs with fetched data just in case user wants to edit later
+            for(let key in payload) {
+                const inp = document.getElementById('inp-' + key);
+                if(inp) {
+                    inp.value = payload[key].toFixed(2);
+                    const valLbl = document.getElementById('val-' + key);
+                    if(valLbl) valLbl.innerText = payload[key].toFixed(1);
+                }
+            }
+
+            await predictAQI(payload);
+        } catch (err) {
+            alert("Failed to fetch API data: " + err);
+        }
+        resetBtn(btn, loader);
+    }
+
+    async function searchLocationAndData() {
+        const locName = document.getElementById('inp-location').value.trim();
+        if(!locName) {
+            alert("Please enter a location name.");
+            return;
+        }
+
+        const btn = document.getElementById('btn-search');
+        const loader = document.getElementById('loader-search');
+        const locInfo = document.getElementById('search-location-info');
+        const locText = document.getElementById('search-location-text');
+        
+        btn.disabled = true;
+        loader.style.display = 'block';
+        locInfo.style.display = 'none';
+
+        try {
+            // Geocode using Open-Meteo Geocoding API
+            // Fetch up to 20 results to ensure we can filter precisely for Tamil Nadu
+            const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(locName)}&count=20&language=en&format=json`);
+            const geoData = await geoRes.json();
+
+            if(!geoData.results || geoData.results.length === 0) {
+                alert("Location not found in Tamil Nadu or globally. Please check spelling.");
+                resetBtn(btn, loader);
+                return;
+            }
+
+            // Precisely target Tamil Nadu
+            let location = geoData.results.find(loc => loc.admin1 === "Tamil Nadu");
+            
+            // Fallbacks: If not in TN, try India, then default to first result
+            if (!location) location = geoData.results.find(loc => loc.country === "India");
+            if (!location) location = geoData.results[0];
+
+            const lat = location.latitude;
+            const lon = location.longitude;
+            
+            // Display full strict location hierarchy
+            locText.innerText = `${location.name}${location.admin1 ? ', ' + location.admin1 : ''}${location.country ? ', ' + location.country : ''} (${lat.toFixed(4)}°, ${lon.toFixed(4)}°)`;
+            locInfo.style.display = 'flex';
+
+            await fetchDataForLatLon(lat, lon, btn, loader);
+        } catch (err) {
+            alert("Failed to geocode location: " + err);
+            resetBtn(btn, loader);
+        }
+    }
+
+    async function fetchLocationAndData() {
+        const btn = document.getElementById('btn-fetch');
+        const loader = document.getElementById('loader-auto');
+        const locInfo = document.getElementById('location-info');
+        const locText = document.getElementById('location-text');
+        
+        btn.disabled = true;
+        loader.style.display = 'block';
+        locInfo.style.display = 'none';
+
+        if (!navigator.geolocation) {
+            alert("Geolocation is not supported by your browser");
+            resetBtn(btn, loader);
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(async (position) => {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            locText.innerText = `${lat.toFixed(4)}°, ${lon.toFixed(4)}°`;
+            locInfo.style.display = 'flex';
+
+            try {
+                await fetchDataForLatLon(lat, lon, btn, loader);
+            } catch (err) {
+                alert("Failed to fetch API data: " + err);
+                resetBtn(btn, loader);
+            }
+        }, (error) => {
+            alert("Location access denied or failed.");
+            resetBtn(btn, loader);
+        });
+    }
+
+    async function submitManual() {
+        const btn = document.getElementById('btn-manual');
+        const loader = document.getElementById('loader-manual');
+        btn.disabled = true;
+        loader.style.display = 'block';
+
+        const payload = {
+            "PM2.5": parseFloat(document.getElementById('inp-PM2.5').value) || 0,
+            "PM10": parseFloat(document.getElementById('inp-PM10').value) || 0,
+            "NO2": parseFloat(document.getElementById('inp-NO2').value) || 0,
+            "SO2": parseFloat(document.getElementById('inp-SO2').value) || 0,
+            "CO": parseFloat(document.getElementById('inp-CO').value) || 0,
+            "O3": parseFloat(document.getElementById('inp-O3').value) || 0,
+            "temperature": parseFloat(document.getElementById('inp-temperature').value) || 0,
+            "humidity": parseFloat(document.getElementById('inp-humidity').value) || 0,
+            "windspeed": parseFloat(document.getElementById('inp-windspeed').value) || 0
+        };
+
+        await predictAQI(payload);
+        resetBtn(btn, loader);
+    }
+
+    function resetBtn(btn, loader) {
+        btn.disabled = false;
+        loader.style.display = 'none';
+    }
+
+    async function predictAQI(data) {
+        try {
+            const res = await fetch('/api/predict', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            
+            if(result.error) {
+                alert(result.error);
+                return;
+            }
+
+            updateResultUI(result);
+        } catch (err) {
+            alert("Prediction failed: " + err);
+        }
+    }
+
+    function updateResultUI(result) {
+        const aqiVal = document.getElementById('aqi-val');
+        const aqiCat = document.getElementById('aqi-cat');
+        const aqiCircle = document.getElementById('aqi-circle');
+        const summaryGrid = document.getElementById('summary-grid');
+        const summaryPanel = document.getElementById('inputs-summary');
+
+        // Animate counter
+        let start = 0;
+        const end = Math.round(result.aqi);
+        const duration = 1000;
+        const stepTime = Math.abs(Math.floor(duration / end));
+        
+        const timer = setInterval(() => {
+            start += 1;
+            aqiVal.innerText = start;
+            if (start >= end) {
+                clearInterval(timer);
+                aqiVal.innerText = result.aqi.toFixed(1);
+            }
+        }, stepTime === 0 ? 1 : stepTime);
+
+        aqiCat.innerText = result.category;
+
+        // Set classes for colors
+        aqiCircle.className = 'aqi-circle aqi-' + result.category.replace(' ', '-');
+        document.body.className = 'theme-' + result.category.replace(' ', '-');
+
+        // Update summary
+        summaryGrid.innerHTML = '';
+        for(let key in result.inputs_used) {
+            summaryGrid.innerHTML += `
+                <div class="summary-item">
+                    <span class="summary-label">${key}</span>
+                    <span class="summary-val">${result.inputs_used[key].toFixed(2)}</span>
+                </div>
+            `;
+        }
+        summaryPanel.classList.add('active');
+    }
+</script>
+</body>
+</html>
